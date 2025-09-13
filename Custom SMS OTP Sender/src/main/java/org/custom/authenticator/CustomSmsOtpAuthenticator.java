@@ -9,6 +9,7 @@ import org.keycloak.authentication.Authenticator;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
+import org.keycloak.models.utils.FormMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,6 +69,11 @@ public class CustomSmsOtpAuthenticator implements Authenticator {
 
     @Override
     public void action(AuthenticationFlowContext context) {
+
+        if (otpService == null) {
+            otpService = new OTPService(context.getAuthenticatorConfig().getConfig());
+        }
+
         String inputOtp = context.getHttpRequest().getDecodedFormParameters().getFirst("otp");
         if (inputOtp == null || inputOtp.isEmpty()) {
             logger.warn("No OTP provided");
@@ -80,8 +86,17 @@ public class CustomSmsOtpAuthenticator implements Authenticator {
             context.success();
         } else {
             logger.warn("Invalid OTP provided");
-            context.failure(AuthenticationFlowError.INVALID_CREDENTIALS);
+            context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS, createOTPFailedForm(context,"Invalid OTP provided"));
+
         }
+    }
+
+    private Response createOTPFailedForm(AuthenticationFlowContext context, String invalidOtpProvided) {
+        return context.form()
+                .setAttribute("realm", context.getRealm())
+                .setAttribute("user", context.getUser())
+                .addError(new FormMessage(invalidOtpProvided))
+                .createForm("otp-input.ftl");
     }
 
     @Override

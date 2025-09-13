@@ -66,10 +66,10 @@ public class RecaptchaUtils {
     }
 
 
-    public static boolean recaptchaAction (AuthenticationFlowContext context,
-                        String SITE_SECRET,
-                        String G_RECAPTCHA_RESPONSE,
-                                           String USE_RECAPTCHA_NET ) {
+    public static boolean recaptchaAction(AuthenticationFlowContext context,
+                                          String SITE_SECRET,
+                                          String G_RECAPTCHA_RESPONSE,
+                                          String USE_RECAPTCHA_NET) {
 
         MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
         boolean success = false;
@@ -82,7 +82,6 @@ public class RecaptchaUtils {
 
             success = validateRecaptcha(context, success, captcha, secret, USE_RECAPTCHA_NET);
         }
-       return success;
+        return success;
     }
-
 }

@@ -1,18 +1,18 @@
-# Custom Username Form with reCAPTCHA for Keycloak
+# Custom Username Form (Create User if not exist form) with reCAPTCHA for Keycloak
 
 ## Overview
 
-This Keycloak authenticator integrates a custom username form with **Google reCAPTCHA** validation. The form collects the username without validating if the user exists in the system. Additionally, the reCAPTCHA ensures bot protection during the username submission process.
+This Keycloak authenticator integrates a custom username (create user if not exist) form with **Google reCAPTCHA** validation. The form collects the username without validating if the user exists in the system. Additionally, the reCAPTCHA ensures bot protection during the username submission process.
 
 ## Features
-- **Username Form**: Collects the username for authentication purposes.
+- **Username Form**: Collects the username for authentication or user creation purpose.
 - **Google reCAPTCHA Integration**: Protects the form from automated submissions.
 - **Customizable Configuration**: You can configure the **reCAPTCHA Site Key** and **Secret**.
 
 ## Components
 
 This project consists of the following components:
-1. **CustomUsernameForm**: The custom form authenticator for collecting the username and validating the reCAPTCHA response.
+1. **CustomUsernameForm**: The custom form authenticator for collecting the username(create user if not exist) and validating the reCAPTCHA response(not check for dev env if you want to check reCAPTCHA in dev env you can remove validation code in CustomUsernameForm). 
 2. **CustomUsernameFormFactory**: The factory to configure and initialize the **CustomUsernameForm** authenticator.
 3. **RecaptchaUtils**: Utility class to handle the reCAPTCHA verification and related operations.
 

@@ -10,6 +10,7 @@ import org.keycloak.authentication.Authenticator;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
+import org.keycloak.models.utils.FormMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,7 +21,6 @@ public class CustomEmailOtpAuthenticator implements Authenticator {
 
     @Override
     public void authenticate(AuthenticationFlowContext context) {
-
         var user = context.getUser();
 
         if (user == null) {
@@ -34,8 +34,8 @@ public class CustomEmailOtpAuthenticator implements Authenticator {
         }
 
         MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
-        String email = formData.getFirst("email");
-        logger.info("Input email: " + email);
+        String email = formData.getFirst("username");
+
 
         if (email != null){
             validateEmail(email, context);
@@ -61,6 +61,14 @@ public class CustomEmailOtpAuthenticator implements Authenticator {
                 .createForm("otp-input.ftl");
     }
 
+    private Response createOTPFailedForm(AuthenticationFlowContext context, String message) {
+        return context.form()
+                .setAttribute("realm", context.getRealm())
+                .setAttribute("user", context.getUser())
+                .addError(new FormMessage(message))
+                .createForm("otp-input.ftl");
+    }
+
     private void validateEmail(String email, AuthenticationFlowContext context) {
         if (!email.matches("^[\\\\w.-]+@[\\\\w.-]+\\\\.[a-zA-Z]{2,}$")) {
             context.failure(AuthenticationFlowError.INVALID_USER);
@@ -69,6 +77,9 @@ public class CustomEmailOtpAuthenticator implements Authenticator {
 
     @Override
     public void action(AuthenticationFlowContext context) {
+        if (emailSenderService == null) {
+            emailSenderService = new EmailSenderService(context.getRealm().getSmtpConfig());
+        }
         String inputOtp = context.getHttpRequest().getDecodedFormParameters().getFirst("otp");
         if (inputOtp == null || inputOtp.isEmpty()) {
             logger.warn("No OTP provided");
@@ -81,7 +92,7 @@ public class CustomEmailOtpAuthenticator implements Authenticator {
             context.success();
         } else {
             logger.warn("Invalid OTP provided");
-            context.failure(AuthenticationFlowError.INVALID_CREDENTIALS);
+            context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS, createOTPFailedForm(context,"Invalid OTP provided"));
         }
     }
 

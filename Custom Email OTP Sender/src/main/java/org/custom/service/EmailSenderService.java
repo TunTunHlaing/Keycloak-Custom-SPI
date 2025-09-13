@@ -43,9 +43,15 @@ public class EmailSenderService {
     }
 
     public boolean validateOTP(String otp, KeycloakSession session) {
-        String storedOtp = session.getContext().getRealm().getAttribute("otp_" + otp);
-        Long expiryTime = Long.valueOf(session.getContext().getRealm().getAttribute("otp_expiry_" + otp));
-        return storedOtp != null && System.currentTimeMillis() < expiryTime;
+        try {
+            String storedOtp = session.getContext().getRealm().getAttribute("otp_" + otp);
+            Long expiryTime = Long.valueOf(session.getContext().getRealm().getAttribute("otp_expiry_" + otp));
+            return storedOtp != null && System.currentTimeMillis() < expiryTime;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+
     }
 
     public String generateOTP() {
