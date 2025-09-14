@@ -2,6 +2,8 @@ package org.custom.authenticator;
 
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
+import org.custom.constant.OtpConfigKey;
+import org.custom.constant.OtpHelper;
 import org.custom.service.OTPService;
 import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.AuthenticationFlowError;
@@ -36,12 +38,15 @@ public class CustomSmsOtpAuthenticator implements Authenticator {
         String phoneNumber = formData.getFirst("phone");
         logger.info("Input PhoneNumber: " + phoneNumber);
 
+
         if (phoneNumber != null) {
+
+            var config = context.getAuthenticatorConfig().getConfig();
+            var authSession = context.getAuthenticationSession();
+            String otp = OtpHelper.generateNumericOtp(Integer.parseInt(config.get(OtpConfigKey.otpLength)));
+            OtpHelper.storeOtp(authSession, otp, Integer.parseInt(config.get(OtpConfigKey.otpExpired)) * 60_000L);
+
             validatePhone(phoneNumber, context);
-
-            String otp = otpService.generateOTP();
-            otpService.storeOTP(otp, context.getSession());
-
             otpService.sendSMSOTP(phoneNumber, otp);
 
             logger.info("Creating OTP input form");
@@ -49,7 +54,6 @@ public class CustomSmsOtpAuthenticator implements Authenticator {
         }else {
             context.success();
         }
-
 
     }
 
@@ -70,34 +74,32 @@ public class CustomSmsOtpAuthenticator implements Authenticator {
     @Override
     public void action(AuthenticationFlowContext context) {
 
-        if (otpService == null) {
-            otpService = new OTPService(context.getAuthenticatorConfig().getConfig());
+        var authSession = context.getAuthenticationSession();
+        String inputOtp = context.getHttpRequest().getDecodedFormParameters().getFirst("otp");
+
+        if (OtpHelper.isOtpExpired(authSession)) {
+            context.failureChallenge(AuthenticationFlowError.EXPIRED_CODE, context.form()
+                    .addError(new FormMessage("OTP expired. Please request a new one"))
+                    .createForm("otp-input.ftl"));
+            return;
         }
 
-        String inputOtp = context.getHttpRequest().getDecodedFormParameters().getFirst("otp");
-        if (inputOtp == null || inputOtp.isEmpty()) {
-            logger.warn("No OTP provided");
+        int attempts = OtpHelper.incrementAttempts(authSession);
+        if (attempts > Integer.parseInt(context.getAuthenticatorConfig().getConfig().get(OtpConfigKey.maxAttempt))) {
+            logger.warn("Max OTP attempts exceeded for session {}", authSession.getAuthenticatedUser());
             context.failure(AuthenticationFlowError.INVALID_CREDENTIALS);
             return;
         }
 
-        if (otpService.validateOTP(inputOtp, context.getSession())) {
-            logger.info("OTP validation successful for user: " + context.getUser().getUsername());
+        if (OtpHelper.verifyOtp(authSession, inputOtp)) {
+            logger.info("OTP validated for user {}", context.getUser().getUsername());
             context.success();
         } else {
-            logger.warn("Invalid OTP provided");
-            context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS, createOTPFailedForm(context,"Invalid OTP provided"));
-
+            context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS,
+                    context.form().addError(new FormMessage("Invalid OTP")).createForm("otp-input.ftl"));
         }
     }
 
-    private Response createOTPFailedForm(AuthenticationFlowContext context, String invalidOtpProvided) {
-        return context.form()
-                .setAttribute("realm", context.getRealm())
-                .setAttribute("user", context.getUser())
-                .addError(new FormMessage(invalidOtpProvided))
-                .createForm("otp-input.ftl");
-    }
 
     @Override
     public boolean requiresUser() {

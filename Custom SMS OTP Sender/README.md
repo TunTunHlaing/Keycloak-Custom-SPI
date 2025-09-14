@@ -1,35 +1,50 @@
 # Custom SMS OTP Authenticator for Keycloak
 
-This custom authenticator allows OTP (One-Time Password) authentication via SMS for Keycloak users. It uses **Twilio** as the SMS service to send OTPs and validates the OTP entered by the user.
+This custom authenticator allows OTP (One-Time Password) authentication via **SMS** for Keycloak users. It uses **Twilio** as the SMS provider to send OTPs, and validates the OTP entered by the user.
+
+---
 
 ## Configuration
 
 ### 1. Set up Twilio Credentials
 
-To configure this authenticator, you must provide **Twilio** credentials:
+To configure this authenticator, you must provide your **Twilio** credentials:
 
 ![OTP SMS configure flow](src/main/resources/images/custom-sms.png)
 
 - **Twilio Account SID**: The SID from your Twilio account.
-- **Twilio Auth Token**: The authentication token for your Twilio account.
-- **Twilio Phone Number**: The phone number from which the OTP will be sent.
+- **Twilio Auth Token**: The authentication token from your Twilio account.
+- **Twilio Phone Number**: The sender phone number from which the OTP will be sent.
 
-These credentials should be added to the **Authenticator Configuration**:
+Steps:
 
 1. Navigate to the **Keycloak Admin Console**.
 2. Under **Authentication**, create or edit an existing flow.
-3. Add the **Custom SMS OTP Authenticator** to the flow.
-4. In the **Authenticator Configurations** tab, provide the **Twilio SID**, **Auth Token**, and **Phone Number** values.
+3. Add the **Custom SMS OTP Authenticator** (`Custom OTP Sender`) to the flow.
+4. In the **Authenticator Configurations** tab, provide your **Twilio SID**, **Auth Token**, and **Phone Number**.
+
+---
 
 ### 2. Phone Number Validation
 
-The **CustomSmsOtpAuthenticator** validates the phone number provided by the user before sending the OTP. It uses a regular expression to ensure that the phone number matches a valid format (`+?[0-9]{7,15}`).
+The **CustomSmsOtpAuthenticator** validates the phone number before sending an OTP.  
+It uses the regex:
+
+```
++?[0-9]{7,15}
+```
+
+
+This ensures that the number is in an international format (e.g., `+11234567890`).
+
+---
 
 ### 3. OTP Generation and SMS Sending
 
-- The authenticator generates a random OTP.
-- The OTP is sent to the user's phone via **Twilio SMS**.
-- The OTP is stored temporarily for validation.
+- A random numeric OTP is generated (length configurable).
+- The OTP is stored in the authentication session with an expiry time.
+- The OTP is sent to the user’s phone number via **Twilio SMS**.
+- OTP attempts are tracked and limited by configuration.
 
 ---
 
@@ -37,17 +52,16 @@ The **CustomSmsOtpAuthenticator** validates the phone number provided by the use
 
 ### Authentication Flow
 
-1. The user enters their **phone number** in the login form. (login form must pass **phone** fields to work this flow)
-2. The **Custom SMS OTP Authenticator** validates the phone number and generates an OTP.
-3. The OTP is sent to the user's phone via **Twilio**.
-4. The user is presented with an OTP input form to enter the OTP they received.
-5. The user submits the OTP for validation:
-    - If the OTP is valid, authentication is successful.
-    - If the OTP is invalid, the user is prompted again.
-
-### OTP Input Form
-
-The user is prompted to enter the OTP they received via SMS in the form presented by the authenticator.
+1. The user enters their **phone number** in the login form.  
+   *(The login form must include the field `phone` for this to work.)*
+2. The **Custom SMS OTP Authenticator** validates the phone number.
+3. The authenticator generates and stores an OTP.
+4. The OTP is sent to the user’s phone via **Twilio**.
+5. The user is presented with an OTP input form to enter the code.
+6. The user submits the OTP:
+   -  If valid → authentication succeeds.
+   -  If invalid → user is prompted again until max attempts are reached.
+   - If expired → user must request a new OTP.
 
 ---
 
@@ -55,41 +69,45 @@ The user is prompted to enter the OTP they received via SMS in the form presente
 
 ### 1. **CustomSmsOtpAuthenticator**
 
-This is the main class implementing the `Authenticator` interface. It performs the following tasks:
-- Validates the phone number.
-- Generates and stores the OTP.
-- Sends the OTP via SMS using the **Twilio API**.
-- Displays an OTP input form for the user to enter their OTP.
+Main class implementing the `Authenticator` interface:
+- Validates phone number.
+- Generates and stores OTP.
+- Sends OTP via Twilio.
+- Displays an OTP input form for user input.
+- Validates OTP with expiry & attempt checks.
 
 ### 2. **OTPService**
 
-The `OTPService` class handles the OTP generation, validation, and storage:
-- Generates a random 6-digit OTP.
-- Sends the OTP via SMS using **Twilio**.
-- Validates the OTP provided by the user.
-- Stores OTPs temporarily in the **Keycloak session**.
+Handles SMS operations:
+- Sends OTP via Twilio API.
+- Uses provided Twilio SID, Auth Token, and Phone Number.
+- Wraps SMS sending logic separate from the authenticator.
 
 ### 3. **CustomSmsOtpAuthenticatorFactory**
 
-This factory class configures the **CustomSmsOtpAuthenticator** and its settings in the **Keycloak Admin Console**:
-- Displays the authenticator name (`Custom OTP Sender`).
-- Provides configuration properties for the **Twilio** credentials (SID, Auth Token, and Phone Number).
+Registers the authenticator in Keycloak:
+- Display name: `Custom OTP Sender`.
+- Provides configuration options:
+   - **Twilio Account SID**
+   - **Twilio Auth Token**
+   - **Twilio Phone Number**
+   - **Otp Length**
+   - **Otp Expired (minutes)**
+   - **Max Attempt**
 
 ---
 
 ## Twilio Setup
 
-To use this authenticator, you'll need a **Twilio** account:
-
-1. Go to [Twilio](https://www.twilio.com/) and sign up for an account.
-2. Once signed in, navigate to the **Dashboard** to get your **Account SID** and **Auth Token**.
-3. Buy a **Twilio phone number** from the **Twilio Console** to send SMS.
+1. From the **Dashboard**, copy your **Account SID** and **Auth Token**.
+2. Purchase a **Twilio phone number** for sending SMS.
+3. Use these values in the **Authenticator Configuration** inside Keycloak.
 
 ---
 
 ## Example: OTP Input Form
 
-Here is the HTML form displayed to the user where they will enter their OTP:
+Here is the FreeMarker template (`otp-input.ftl`) displayed to the user:
 
 ```html
 <@layout.registrationLayout displayMessage=true; section>

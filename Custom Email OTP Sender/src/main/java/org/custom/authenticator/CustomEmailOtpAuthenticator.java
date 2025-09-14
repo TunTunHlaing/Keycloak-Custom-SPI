@@ -3,6 +3,8 @@ package org.custom.authenticator;
 import jakarta.mail.MessagingException;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
+import org.custom.constant.OtpConfigKey;
+import org.custom.constant.OtpHelper;
 import org.custom.service.EmailSenderService;
 import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.AuthenticationFlowError;
@@ -18,41 +20,6 @@ public class CustomEmailOtpAuthenticator implements Authenticator {
 
     private static final Logger logger = LoggerFactory.getLogger(CustomEmailOtpAuthenticator.class);
     private EmailSenderService emailSenderService;
-
-    @Override
-    public void authenticate(AuthenticationFlowContext context) {
-        var user = context.getUser();
-
-        if (user == null) {
-            logger.warn("No username provided");
-            context.failure(AuthenticationFlowError.UNKNOWN_USER);
-            return;
-        }
-
-        if (emailSenderService == null) {
-            emailSenderService = new EmailSenderService(context.getRealm().getSmtpConfig());
-        }
-
-        MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
-        String email = formData.getFirst("username");
-
-
-        if (email != null){
-            validateEmail(email, context);
-            var otp = emailSenderService.generateOTP();
-            emailSenderService.storeOTP(otp, context.getSession());
-        try {
-            emailSenderService.send(email, otp);
-        } catch (MessagingException e) {
-            throw new RuntimeException(e);
-        }
-
-        logger.info("Creating OTP input form");
-        context.challenge(createOTPInputForm(context));
-        }else {
-            context.success();
-        }
-    }
 
     private Response createOTPInputForm(AuthenticationFlowContext context) {
         return context.form()
@@ -76,23 +43,65 @@ public class CustomEmailOtpAuthenticator implements Authenticator {
     }
 
     @Override
-    public void action(AuthenticationFlowContext context) {
+    public void authenticate(AuthenticationFlowContext context) {
+
         if (emailSenderService == null) {
             emailSenderService = new EmailSenderService(context.getRealm().getSmtpConfig());
         }
+        var config = context.getAuthenticatorConfig().getConfig();
+
+        var authSession = context.getAuthenticationSession();
+        String otp = OtpHelper.generateNumericOtp(Integer.parseInt(config.get(OtpConfigKey.otpLength)));
+        OtpHelper.storeOtp(authSession, otp, Integer.parseInt(config.get(OtpConfigKey.otpExpired)) * 60_000L);
+
+        UserModel user = context.getUser();
+        MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
+        String email = formData.getFirst("username");
+
+        if (email == null) {
+            context.success();
+            context.failure(AuthenticationFlowError.INVALID_USER);
+            return;
+        }
+
+        try {
+            validateEmail(email, context);
+            emailSenderService.send(email, otp);
+        } catch (MessagingException e) {
+            throw new RuntimeException(e);
+        }
+        logger.info("OTP generated and email queued for {}", user.getUsername());
+
+        context.challenge(createOTPInputForm(context));
+    }
+
+
+    @Override
+    public void action(AuthenticationFlowContext context) {
+
+        var authSession = context.getAuthenticationSession();
         String inputOtp = context.getHttpRequest().getDecodedFormParameters().getFirst("otp");
-        if (inputOtp == null || inputOtp.isEmpty()) {
-            logger.warn("No OTP provided");
+
+        if (OtpHelper.isOtpExpired(authSession)) {
+            context.failureChallenge(AuthenticationFlowError.EXPIRED_CODE, context.form()
+                    .addError(new FormMessage("OTP expired. Please request a new one"))
+                    .createForm("otp-input.ftl"));
+            return;
+        }
+
+        int attempts = OtpHelper.incrementAttempts(authSession);
+        if (attempts > Integer.parseInt(context.getAuthenticatorConfig().getConfig().get(OtpConfigKey.maxAttempt))) {
+            logger.warn("Max OTP attempts exceeded for session {}", authSession.getAuthenticatedUser());
             context.failure(AuthenticationFlowError.INVALID_CREDENTIALS);
             return;
         }
 
-        if (emailSenderService.validateOTP(inputOtp, context.getSession())) {
-            logger.info("OTP validation successful for user: " + context.getUser().getUsername());
+        if (OtpHelper.verifyOtp(authSession, inputOtp)) {
+            logger.info("OTP validated for user {}", context.getUser().getUsername());
             context.success();
         } else {
-            logger.warn("Invalid OTP provided");
-            context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS, createOTPFailedForm(context,"Invalid OTP provided"));
+            context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS,
+                    context.form().addError(new FormMessage("Invalid OTP")).createForm("otp-input.ftl"));
         }
     }
 

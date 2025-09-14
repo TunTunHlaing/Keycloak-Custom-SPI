@@ -33,6 +33,7 @@ public class CustomUsernameForm extends AbstractFormAuthenticator {
     @Override
     public void action(AuthenticationFlowContext context) {
 
+        logger.info("Custom User name Form Starting...");
         MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
         String username = formData.getFirst("username");
 
@@ -95,6 +96,5 @@ public class CustomUsernameForm extends AbstractFormAuthenticator {
 
     @Override
     public void setRequiredActions(KeycloakSession session, RealmModel realm, UserModel user) {
-        // No required actions
     }
 }

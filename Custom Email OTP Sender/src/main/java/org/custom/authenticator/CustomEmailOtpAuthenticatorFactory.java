@@ -1,5 +1,6 @@
 package org.custom.authenticator;
 
+import org.custom.constant.OtpConfigKey;
 import org.keycloak.Config;
 import org.keycloak.authentication.Authenticator;
 import org.keycloak.authentication.AuthenticatorFactory;
@@ -48,9 +49,33 @@ public class CustomEmailOtpAuthenticatorFactory implements AuthenticatorFactory 
     public String getHelpText() {
         return "Send OTP Via Email.";
     }
+
+
+    private static ProviderConfigProperty constructProperty(String name, String label, String type,
+                                                            String helpText, String defaultValue) {
+        ProviderConfigProperty otpProperty = new ProviderConfigProperty();
+        otpProperty.setName(name);
+        otpProperty.setLabel(label);
+        otpProperty.setType(type);
+        otpProperty.setHelpText(helpText);
+        otpProperty.setDefaultValue(defaultValue);
+        return otpProperty;
+    }
+
+
     @Override
     public List<ProviderConfigProperty> getConfigProperties() {
-        return List.of();
+        return List.of(
+                constructProperty( OtpConfigKey.otpLength, "Otp Length", ProviderConfigProperty.STRING_TYPE, "Length for Otp.", "5"),
+                constructProperty( OtpConfigKey.otpExpired, "Otp Expired",ProviderConfigProperty.STRING_TYPE, "Expired time for Otp in minutes.", "1"),
+                constructProperty( OtpConfigKey.maxAttempt,"Max Attempt", ProviderConfigProperty.STRING_TYPE, "Max attempt for wrong Otp.", "5")
+                );
+    }
+
+
+    @Override
+    public String getId() {
+        return PROVIDER_ID;
     }
 
     @Override
@@ -73,8 +98,4 @@ public class CustomEmailOtpAuthenticatorFactory implements AuthenticatorFactory 
 
     }
 
-    @Override
-    public String getId() {
-        return PROVIDER_ID;
-    }
 }

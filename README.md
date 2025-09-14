@@ -4,16 +4,15 @@ This repository contains several custom authentication modules for **Keycloak**.
 
 ## Modules
 
-1. **Custom Username Form**
-2. **Custom User Creation If Not Exist**
-3. **Custom OTP Sender (SMS)**
-4. **Custom OTP Sender (Email)**
+1. **Custom Username Form (User Creation If Not Exist) with reCAPTCHA**
+2. **Custom OTP Sender (SMS)**
+3. **Custom OTP Sender (Email)**
 
 ---
 
 ## Module 1: Custom Username Form
 
-This module customizes the default username form in Keycloak. It allows you to modify the username input form used for authentication.
+This module customizes the default username form in Keycloak. It allows you to modify the username input form used for authentication and user creation if not exist using reCAPTCHA.
 
 ### Features:
 - Customizable username input field.
@@ -31,25 +30,7 @@ This module customizes the default username form in Keycloak. It allows you to m
 
 ---
 
-## Module 2: Custom User Creation If Not Exist
-
-This module automates the creation of a user if the user does not already exist in the system. This can be useful for scenarios where you want users to be automatically created in Keycloak based on their username.
-
-### Features:
-- Automatically creates a user if they do not exist in the Keycloak realm.
-- Provides flexibility for the username to be an email, phone number, or regular username.
-
-### Configuration:
-1. Add the **Custom User Creation If Not Exist** authenticator to an Authentication Flow.
-2. Set up the username validation regex to accept emails, phone numbers, or regular usernames.
-
-### Usage:
-- The system first checks if the user exists based on the provided username.
-- If the user doesn't exist, a new user is created automatically.
-
----
-
-## Module 3: Custom OTP Sender (SMS)
+## Module 2: Custom OTP Sender (SMS)
 
 This module enables OTP (One-Time Password) based authentication via SMS. It integrates with **Twilio** to send OTPs to the user's phone number.
 
@@ -58,7 +39,7 @@ This module enables OTP (One-Time Password) based authentication via SMS. It int
 - Validates the OTP entered by the user.
 
 ### Configuration:
-1. Configure **Twilio Account SID**, **Auth Token**, and **Phone Number** in the **Authenticator Configuration** tab.
+1. Configure **Twilio Account SID**, **Auth Token**, and **Phone Number** and also OTP configuration like **OTP Length, OTP Expired and Max Attempt** in the **Authenticator Configuration** tab.
 2. Add the **Custom OTP Sender SMS** authenticator to the authentication flow.
 
 ### Usage:
@@ -68,7 +49,7 @@ This module enables OTP (One-Time Password) based authentication via SMS. It int
 
 ---
 
-## Module 4: Custom OTP Sender (Email)
+## Module 3: Custom OTP Sender (Email)
 
 This module enables OTP-based authentication via email. It uses **SMTP** to send OTPs to the user's email address.
 
@@ -77,7 +58,7 @@ This module enables OTP-based authentication via email. It uses **SMTP** to send
 - Validates the OTP entered by the user.
   
 ### Configuration:
-1. Configure **SMTP Host**, **Port**, **From Email**, **Username**, and **Password** in the **Authenticator Configuration** tab.
+1. Configure **SMTP Host**, **Port**, **From Email**, **Username**, and **Password** in the **Realm Setting Email Configuration** tab.
 2. Add the **Custom OTP Sender Email** authenticator to the authentication flow.
 
 ### Usage:

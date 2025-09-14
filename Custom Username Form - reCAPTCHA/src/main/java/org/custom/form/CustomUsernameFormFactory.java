@@ -17,27 +17,36 @@ public class CustomUsernameFormFactory implements AuthenticatorFactory {
     private static final List<ProviderConfigProperty> CONFIG_PROPERTIES = new ArrayList<>();
 
     static {
-        ProviderConfigProperty property;
-        property = new ProviderConfigProperty();
-        property.setName(CustomUsernameForm.SITE_KEY);
-        property.setLabel("Recaptcha Site Key");
-        property.setType(ProviderConfigProperty.STRING_TYPE);
-        property.setHelpText("Google Recaptcha Site Key");
-        CONFIG_PROPERTIES.add(property);
+        CONFIG_PROPERTIES.addAll(List.of(constructProperty(
+                        CustomUsernameForm.SITE_KEY,
+                        "Recaptcha Site Key",
+                        ProviderConfigProperty.STRING_TYPE,
+                        "Google Recaptcha Site Key"
+                ),
 
-        property = new ProviderConfigProperty();
-        property.setName(CustomUsernameForm.SITE_SECRET);
-        property.setLabel("Recaptcha Secret");
-        property.setType(ProviderConfigProperty.STRING_TYPE);
-        property.setHelpText("Google Recaptcha Secret");
-        CONFIG_PROPERTIES.add(property);
+                constructProperty(
+                        CustomUsernameForm.SITE_SECRET,
+                        "Recaptcha Secret",
+                        ProviderConfigProperty.STRING_TYPE,
+                        "Google Recaptcha Secret"
+                ),
 
-        property = new ProviderConfigProperty();
-        property.setName(CustomUsernameForm.USE_RECAPTCHA_NET);
-        property.setLabel("use recaptcha.net");
-        property.setType(ProviderConfigProperty.BOOLEAN_TYPE);
-        property.setHelpText("Use recaptcha.net? (or else google.com)");
-        CONFIG_PROPERTIES.add(property);
+                constructProperty(
+                        CustomUsernameForm.USE_RECAPTCHA_NET,
+                        "Use recaptcha.net",
+                        ProviderConfigProperty.BOOLEAN_TYPE,
+                        "Use recaptcha.net instead of google.com"
+                )));
+
+    }
+
+    private static ProviderConfigProperty constructProperty(String name, String label, String type, String helpText) {
+        ProviderConfigProperty otpProperty = new ProviderConfigProperty();
+        otpProperty.setName(name);
+        otpProperty.setLabel(label);
+        otpProperty.setType(type);
+        otpProperty.setHelpText(helpText);
+        return otpProperty;
     }
 
 

@@ -1,6 +1,7 @@
 package org.custom.authenticator;
 
 import org.custom.TwilioKey;
+import org.custom.constant.OtpConfigKey;
 import org.keycloak.Config;
 import org.keycloak.authentication.Authenticator;
 import org.keycloak.authentication.AuthenticatorFactory;
@@ -53,19 +54,26 @@ public class CustomSmsOtpAuthenticatorFactory implements AuthenticatorFactory {
     public List<ProviderConfigProperty> getConfigProperties() {
 
         return List.of(
-                constructOtpProperty(TwilioKey.SID.getKeyname(), "Twilio Account SID", ProviderConfigProperty.STRING_TYPE, "Twilio SID for sending SMS"),
-                constructOtpProperty(TwilioKey.AUTH.getKeyname(), "Twilio Auth Token", ProviderConfigProperty.STRING_TYPE, "Twilio Auth Token"),
-                constructOtpProperty(TwilioKey.PHONE.getKeyname(), "Twilio Phone Number", ProviderConfigProperty.STRING_TYPE, "Sender phone number for Twilio")
+                constructOtpProperty(TwilioKey.SID.getKeyname(), "Twilio Account SID", ProviderConfigProperty.STRING_TYPE, "Twilio SID for sending SMS", null),
+                constructOtpProperty(TwilioKey.AUTH.getKeyname(), "Twilio Auth Token", ProviderConfigProperty.STRING_TYPE, "Twilio Auth Token", null),
+                constructOtpProperty(TwilioKey.PHONE.getKeyname(), "Twilio Phone Number", ProviderConfigProperty.STRING_TYPE, "Sender phone number for Twilio", null),
+                constructOtpProperty( OtpConfigKey.otpLength, "Otp Length", ProviderConfigProperty.STRING_TYPE, "Length for Otp.", "5"),
+                constructOtpProperty( OtpConfigKey.otpExpired, "Otp Expired",ProviderConfigProperty.STRING_TYPE, "Expired time for Otp in minutes.", "1"),
+                constructOtpProperty( OtpConfigKey.maxAttempt,"Max Attempt", ProviderConfigProperty.STRING_TYPE, "Max attempt for wrong Otp.", "5")
         );
     }
 
 
-    private ProviderConfigProperty constructOtpProperty(String name, String label, String type, String helpText) {
+    private ProviderConfigProperty constructOtpProperty(String name, String label, String type, String helpText, String defaultValue) {
         ProviderConfigProperty otpProperty = new ProviderConfigProperty();
         otpProperty.setName(name);
         otpProperty.setLabel(label);
         otpProperty.setType(type);
         otpProperty.setHelpText(helpText);
+
+        if (defaultValue != null) {
+            otpProperty.setDefaultValue(defaultValue);
+        }
         return otpProperty;
     }
 

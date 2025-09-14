@@ -16,10 +16,7 @@ import org.keycloak.services.validation.Validation;
 import org.keycloak.util.JsonSerialization;
 
 import java.io.InputStream;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 public class RecaptchaUtils {
 
@@ -30,10 +27,13 @@ public class RecaptchaUtils {
                                             String USE_RECAPTCHA_NET) {
         HttpClient httpClient = context.getSession().getProvider(HttpClientProvider.class).getHttpClient();
         HttpPost post = new HttpPost("https://www." + getRecaptchaDomain(context.getAuthenticatorConfig(), USE_RECAPTCHA_NET) + "/recaptcha/api/siteverify");
-        List<NameValuePair> formparams = new LinkedList<>();
-        formparams.add(new BasicNameValuePair("secret", secret));
-        formparams.add(new BasicNameValuePair("response", captcha));
-        formparams.add(new BasicNameValuePair("remoteip", context.getConnection().getRemoteAddr()));
+        List<NameValuePair> params = Arrays.asList(
+                new BasicNameValuePair("secret", secret),
+                new BasicNameValuePair("response", captcha),
+                new BasicNameValuePair("remoteip", context.getConnection().getRemoteAddr())
+        );
+
+        List<NameValuePair> formparams = new LinkedList<>(params);
         try {
             UrlEncodedFormEntity form = new UrlEncodedFormEntity(formparams, "UTF-8");
             post.setEntity(form);
@@ -58,11 +58,8 @@ public class RecaptchaUtils {
                 .map(configModel -> configModel.getConfig())
                 .map(cfg -> Boolean.valueOf(cfg.get(USE_RECAPTCHA_NET)))
                 .orElse(false);
-        if (useRecaptcha) {
-            return "recaptcha.net";
-        }
+        return useRecaptcha ? "recaptcha.net" : "google.com";
 
-        return "google.com";
     }
 
 
