@@ -16,6 +16,8 @@ import org.keycloak.models.utils.FormMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Objects;
+
 public class CustomEmailOtpAuthenticator implements Authenticator {
 
     private static final Logger logger = LoggerFactory.getLogger(CustomEmailOtpAuthenticator.class);
@@ -25,14 +27,6 @@ public class CustomEmailOtpAuthenticator implements Authenticator {
         return context.form()
                 .setAttribute("realm", context.getRealm())
                 .setAttribute("user", context.getUser())
-                .createForm("otp-input.ftl");
-    }
-
-    private Response createOTPFailedForm(AuthenticationFlowContext context, String message) {
-        return context.form()
-                .setAttribute("realm", context.getRealm())
-                .setAttribute("user", context.getUser())
-                .addError(new FormMessage(message))
                 .createForm("otp-input.ftl");
     }
 
@@ -56,11 +50,13 @@ public class CustomEmailOtpAuthenticator implements Authenticator {
 
         UserModel user = context.getUser();
         MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
-        String email = formData.getFirst("username");
 
-        if (email == null) {
+        formData.forEach((k,v) -> System.out.println("Key is :: "  + k  + "  and value is :: "+ v));
+        String inputType = formData.getFirst("inputType");
+        String email = formData.getFirst("inputValue");
+
+        if (!Objects.equals(inputType, "email") && email == null) {
             context.success();
-            context.failure(AuthenticationFlowError.INVALID_USER);
             return;
         }
 

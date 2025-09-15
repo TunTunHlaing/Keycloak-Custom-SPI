@@ -27,19 +27,24 @@ public class CustomUsernameForm extends AbstractFormAuthenticator {
 
     @Override
     public void authenticate(AuthenticationFlowContext context) {
-        Response form = createUsernameForm(context).createForm("custom-username-form.ftl");
+        Response form = createUsernameForm(context, "email").createForm("custom-username-form.ftl");
         context.challenge(form);
     }
+
     @Override
     public void action(AuthenticationFlowContext context) {
-
-        logger.info("Custom User name Form Starting...");
+        logger.info("Custom Username Form Starting...");
         MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
-        String username = formData.getFirst("username");
+        String inputType = formData.getFirst("inputType");
+        String inputValue = formData.getFirst("inputValue");
 
-        if (username == null || username.trim().isEmpty()) {
-            LoginFormsProvider form = createUsernameForm(context);
-            form.setErrors(Collections.singletonList(new FormMessage("Username is required.")));
+        if (inputType == null || !inputType.equals("phone")) {
+            inputType = "email";
+        }
+
+        if (inputValue == null || inputValue.trim().isEmpty()) {
+            LoginFormsProvider form = createUsernameForm(context, inputType);
+            form.setErrors(Collections.singletonList(new FormMessage(inputType.equals("phone") ? "Phone number is required." : "Email is required.")));
             context.failureChallenge(AuthenticationFlowError.INVALID_USER, form.createForm("custom-username-form.ftl"));
             return;
         }
@@ -51,26 +56,28 @@ public class CustomUsernameForm extends AbstractFormAuthenticator {
         }
 
         if (!captchaSuccess) {
-            LoginFormsProvider form = createUsernameForm(context);
-            form.setAttribute("username", username);
+            LoginFormsProvider form = createUsernameForm(context, inputType);
+            form.setAttribute("inputValue", inputValue);
             form.setErrors(Collections.singletonList(new FormMessage("Invalid reCAPTCHA. Please try again.")));
             context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS, form.createForm("custom-username-form.ftl"));
             return;
         }
 
+        var user = context.getSession().users().getUserByUsername(context.getRealm(), inputValue);
 
-        UserModel user = context.getSession().users().getUserByUsername(context.getRealm(), username);
         if (user == null) {
-            user = context.getSession().users().addUser(context.getRealm(), username);
+            user = context.getSession().users().addUser(context.getRealm(), inputValue);
             user.setEnabled(true);
         }
         context.setUser(user);
         context.success();
+
     }
 
-    private LoginFormsProvider createUsernameForm(AuthenticationFlowContext context) {
+    private LoginFormsProvider createUsernameForm(AuthenticationFlowContext context, String inputType) {
         LoginFormsProvider form = context.form()
-                .setAttribute("username", context.getHttpRequest().getDecodedFormParameters().getFirst("username"))
+                .setAttribute("inputValue", context.getHttpRequest().getDecodedFormParameters().getFirst("inputValue"))
+                .setAttribute("inputType", inputType != null ? inputType : "email")
                 .setAttribute("recaptchaRequired", true);
 
         AuthenticatorConfigModel captchaConfig = context.getAuthenticatorConfig();
@@ -82,7 +89,6 @@ public class CustomUsernameForm extends AbstractFormAuthenticator {
 
         return form;
     }
-
 
     @Override
     public boolean requiresUser() {
