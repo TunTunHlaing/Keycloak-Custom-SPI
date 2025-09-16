@@ -6,6 +6,9 @@
       <input type="text" id="otp" name="otp" class="form-control" autofocus />
     </div>
     <div class="form-group">
+            <button type="submit" name="resendOtp" value="true">Resend OTP</button>
+       </div>
+    <div class="form-group">
       <button type="submit" class="btn btn-primary">Verify</button>
     </div>
   </form>
